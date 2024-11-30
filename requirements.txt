@@ -1,0 +1,19 @@
+# Core packages
+expected_cost
+torch
+torchvision
+torchaudio
+
+# Hugging Face libraries
+transformers
+datasets
+
+# LoRA-specific library
+peft
+
+# Additional dependencies
+numpy
+scipy
+scikit-learn
+matplotlib
+tqdm
