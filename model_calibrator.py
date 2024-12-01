@@ -1,5 +1,3 @@
-# model_calibrator.py
-
 import numpy as np
 import torch
 from expected_cost.calibration import calibration_train_on_heldout
@@ -15,6 +13,8 @@ def calculate_log_loss(test_logits, test_targets):
 
 def calibrate_and_evaluate(scores_tst, scores_trn, targets_trn, targets_tst, model_name):
     overall_perf = calculate_log_loss(scores_tst, targets_tst)
+
+    # Calibrate base logits
     scores_tst_cal, cal_model = calibration_train_on_heldout(
         scores_tst, scores_trn, targets_trn,
         calparams={'bias': True, 'priors': None},
@@ -23,11 +23,17 @@ def calibrate_and_evaluate(scores_tst, scores_trn, targets_trn, targets_tst, mod
     )
     torch.save(cal_model.state_dict(), f'models/{model_name}.pth')
     overall_perf_after_cal = LogLoss(scores_tst_cal, targets_tst, priors=None, norm=True)
+
+    # Compute calibration loss metrics
     cal_loss = overall_perf - overall_perf_after_cal
     rel_cal_loss = 100 * cal_loss / overall_perf
+
     return {
         "overall_perf": overall_perf,
         "overall_perf_after_cal": overall_perf_after_cal,
         "cal_loss": cal_loss,
-        "rel_cal_loss": rel_cal_loss
+        "rel_cal_loss": rel_cal_loss,
+        "calibrated_logits_base": scores_tst_cal,  # Add calibrated logits
+        "calibrated_logits_fine_tuned": scores_tst_cal,  # Add fine-tuned logits if applicable
     }
+

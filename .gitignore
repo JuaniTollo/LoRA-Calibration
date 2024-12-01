@@ -1,0 +1,5 @@
+./tokenizer
+./outputs
+./models
+./__pycache__
+*.png
