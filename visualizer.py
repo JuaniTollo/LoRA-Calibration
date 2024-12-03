@@ -101,5 +101,76 @@ def scores_distribution(
     plt.legend(title="Metric", fontsize=12, title_fontsize=14)
 
     plt.tight_layout()
-    plt.savefig(f"./outputs/{dataset}_{model_name}.png", dpi=300)
+    plt.savefig(f"./plots/{dataset}_{model_name}.png", dpi=300)
     return merged
+
+import pandas as pd
+import seaborn as sns
+
+import seaborn as sns
+
+def create_performance_plot(dataframe, save_path, model_name, dataset_name):
+    """
+    Generates a performance plot for the given DataFrame showing before and after calibration.
+    Adds delta (rel_cal_loss) as text annotations and includes dataset_name and model_name in the plot title.
+
+    :param dataframe: Input pandas DataFrame
+    :param save_path: Output path to save the plot
+    :param model_name: Name of the model
+    :param dataset_name: Name of the dataset
+    """
+    # Melt the DataFrame for seaborn compatibility
+    melted_df = dataframe.melt(
+        id_vars=["model", "base/fine tuned", "dataset_name", "rel_cal_loss"],
+        value_vars=["overall_perf", "overall_perf_after_cal"],
+        var_name="Calibration",
+        value_name="Performance"
+    )
+    
+    # Create barplot with Seaborn
+    sns.set_theme(style="whitegrid")
+    plot = sns.catplot(
+        data=melted_df,
+        x="base/fine tuned",
+        y="Performance",
+        hue="Calibration",
+        kind="bar",
+        height=6,
+        aspect=1.5,
+        palette="muted"
+    )
+    
+    # Add delta (rel_cal_loss) as annotations
+    for i, row in dataframe.iterrows():
+        calibrated_value = row["overall_perf_after_cal"]
+        rel_cal_loss = row["rel_cal_loss"]
+        base_fine_tuned = row["base/fine tuned"]
+        
+        # Find the corresponding bar for annotation
+        bar_index = melted_df[
+            (melted_df["Calibration"] == "overall_perf_after_cal") &
+            (melted_df["base/fine tuned"] == base_fine_tuned)
+        ].index[0]
+        bar = plot.ax.patches[bar_index]
+        
+        # Add annotation
+        plot.ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.01,
+            f"Δ {rel_cal_loss:.2f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+            color="black"
+        )
+    
+    # Set titles and labels
+    plot.set_axis_labels("Model Type", "Performance")
+    plot.fig.suptitle(
+        f"Performance Before and After Calibration\nDataset: {dataset_name}, Model: {model_name}",
+        y=1.02
+    )
+
+    # Save the plot
+    plot.savefig(save_path)
+    sns.reset_defaults()

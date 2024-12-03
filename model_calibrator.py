@@ -7,15 +7,36 @@ from expected_cost.psrcal_wrappers import LogLoss
 from psrcal.calibration import AffineCalLogLoss
 from sklearn.model_selection import train_test_split
 import scipy
+def calculate_accuracy(logits, targets):
+    """
+    Calcula la accuracy dado un array de logits y un vector de targets.
+    
+    Args:
+        logits (np.ndarray): Matriz de logits de forma (n_clases, n_muestras).
+        targets (np.ndarray): Vector de targets de largo n_muestras.
+        
+    Returns:
+        float: Porcentaje de precisión (accuracy).
+    """
+    # Obtener las predicciones seleccionando el índice máximo (clase más probable)
+    predictions = np.argmax(logits, axis=0)
+    
+    # Comparar predicciones con los targets
+    correct_predictions = np.sum(predictions == targets)
+    
+    # Calcular precisión
+    accuracy = correct_predictions / len(targets)
+    return accuracy
 
 def divide_test_and_cal(logits, targets, prop=0.2):
     """Split logits and targets into calibration and held-out subsets."""
     indices_cal, indices_held_out = train_test_split(
         range(len(targets)), test_size=1 - prop, stratify=targets
     )
+    
     return (
-        logits[indices_cal], targets[indices_cal],
-        logits[indices_held_out], targets[indices_held_out]
+        logits[indices_cal,:], targets[indices_cal],
+        logits[indices_held_out,:], targets[indices_held_out]
     )
 
 def calculate_log_loss(logits, targets):
@@ -47,15 +68,21 @@ def calculate_logloss_and_calibrate(full_logits, full_targets, model_name, calib
 
     ###################################################################################################
     # Compute the selected EPSR before and after calibration
-    overall_perf = metric(scores_tst, targets_tst, priors=deploy_priors, norm=True)
+    # import pdb
+    # pdb.set_trace()
+    # calculate_accuracy(scores_tst, targets_tst)
+    import scipy
+    log_softmax_val_base = scipy.special.log_softmax(scores_tst, axis=1)
+    overall_perf = metric(log_softmax_val_base, targets_tst, priors=deploy_priors, norm=True)
+    
     overall_perf_after_cal = metric(scores_tst_cal, targets_tst, priors=deploy_priors, norm=True)
     cal_loss = overall_perf-overall_perf_after_cal
     rel_cal_loss = 100*cal_loss/overall_perf
 
-    print(f"Overall performance before calibration ({metric.__name__}) = {overall_perf:4.2f}" ) 
-    print(f"Overall performance after calibration ({metric.__name__}) = {overall_perf_after_cal:4.2f}" ) 
-    print(f"Calibration loss = {cal_loss:4.2f}" ) 
-    print(f"Relative calibration loss = {rel_cal_loss:4.1f}%" ) 
+    # print(f"Overall performance before calibration ({metric.__name__}) = {overall_perf:4.2f}" ) 
+    # print(f"Overall performance after calibration ({metric.__name__}) = {overall_perf_after_cal:4.2f}" ) 
+    # print(f"Calibration loss = {cal_loss:4.2f}" ) 
+    # print(f"Relative calibration loss = {rel_cal_loss:4.1f}%" ) 
 
     ###################################################################################################
 

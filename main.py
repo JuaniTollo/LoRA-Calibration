@@ -2,7 +2,7 @@
 
 from data_loader import get_folders_with_logits, load_npy_files
 from model_calibrator import calculate_logloss_and_calibrate
-from visualizer import scores_distribution
+from visualizer import scores_distribution, create_performance_plot
 from utils import ensure_dir
 from transformers import PreTrainedTokenizerFast
 import argparse
@@ -58,7 +58,12 @@ def main():
             model_name=model_name,
             tokenizer=tokenizer
         )
-        merged_df.to_csv(f"./outputs/{dataset_name}_{model_name}.csv")
+        csv_path = f"./outputs/distribution_{dataset_name}_{model_name}.csv"
+        merged_df.to_csv(csv_path)
+        
+        df = pd.read_csv(f"./outputs/performance_{dataset_name}_{model_name}.csv")
+        print(df)
+        create_performance_plot(df, f"./plots/{dataset_name}_{model_name}.jpg", model_name, dataset_name)
 
     def load_tokenizer():
         tokenizer_path = "./tokenizer/tokenizer.json"
@@ -67,10 +72,9 @@ def main():
         return tokenizer
     # Process datasets
     process_dataset(root_dir, "SocialIQA", "phi-1.5")
-    # process_dataset(root_dir, "SocialIQA",  "phi-2")
-    # process_dataset(root_dir, "HellaSwag",  "phi-1.5")
-    # process_dataset(root_dir, "HellaSwag",  "phi-2")
+    process_dataset(root_dir, "SocialIQA",  "phi-2")
+    process_dataset(root_dir, "HellaSwag",  "phi-1.5")
+    process_dataset(root_dir, "HellaSwag",  "phi-2")
 
-    return 
 if __name__ == "__main__":
     main()

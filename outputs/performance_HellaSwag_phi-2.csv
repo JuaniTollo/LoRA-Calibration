@@ -1,0 +1,3 @@
+,model,base/fine tuned,dataset_name,overall_perf,overall_perf_after_cal,cal_loss,rel_cal_loss
+0,phi-2,base,HellaSwag,1.0523802,0.9361347680331653,0.11624543616757932,11.04595427617956
+1,phi-2,fine-tuned,HellaSwag,0.7586486,0.7420137209480091,0.0166348534042553,2.192695533430373
