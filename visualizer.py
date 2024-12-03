@@ -95,7 +95,7 @@ def scores_distribution(
 
     plt.xlabel("Vocabulary", fontsize=14)
     plt.ylabel("Proportion", fontsize=14)
-    plt.title(f"Grouped Bar Plot of Metrics by Vocabulary - {model_name}", fontsize=16)
+    plt.title(f"Labels distribution run on {model_name} for {dataset}", fontsize=16)
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.legend(title="Metric", fontsize=12, title_fontsize=14)

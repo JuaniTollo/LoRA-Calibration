@@ -2,9 +2,13 @@
 ./outputs
 ./models
 ./__pycache__
+
 *.png
 *.pth
+*.csv
 
 # Ignore Python compiled files
 *.pyc
 __pycache__/
+
+tokenizer/

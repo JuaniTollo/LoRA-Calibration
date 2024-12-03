@@ -23,31 +23,48 @@ def calculate_log_loss(logits, targets):
     log_softmax_vals = scipy.special.log_softmax(logits, axis=1)
     return LogLoss(log_softmax_vals, targets, priors=None, norm=True)
 
-def calibrate_model(full_logits, full_targets, model_name, calibration_prop=0.2):
-    """
-    Calibrate model on a subset and save calibrated results for held-out set.
+def calculate_logloss_and_calibrate(full_logits, full_targets, model_name, calibration_prop=0.2):
+    ###################################################################################################
+    # Create the calibrated scores and the calibration model
 
-    Args:
-        full_logits (np.ndarray): Logits to calibrate.
-        full_targets (np.ndarray): Corresponding targets.
-        model_name (str): Model name for saving calibration model.
-        calibration_prop (float): Proportion of data used for calibration.
+    # Choose EPSR (LogLoss or Brier), calibration method, and, optionally, set the priors to the
+    # deployment ones, if they are expected to be different from the ones in the test data.
 
-    Returns:
-        dict: Calibrated and held-out logits and metrics.
-    """
+    metric = LogLoss 
+    calmethod = AffineCalLogLoss
+    deploy_priors = None
+    calparams = {'bias': True, 'priors': deploy_priors}
     # Divide data into calibration and held-out sets
-    logits_cal, targets_cal, logits_held_out, targets_held_out = divide_test_and_cal(
+
+    scores_trn, targets_trn, scores_tst, targets_tst = divide_test_and_cal(
         full_logits, full_targets, prop=calibration_prop
     )
 
-    # Calibrate using the calibration subset
-    calibrated_logits, calibration_model = calibration_train_on_heldout(
-        logits_held_out, logits_cal, targets_cal,
-        calparams={'bias': True, 'priors': None},
-        calmethod=AffineCalLogLoss,
-        return_model=True
-    )
-    torch.save(calibration_model.state_dict(), f'models/{model_name}_calibration.pth')
+    scores_tst_cal, calmodel = calibration_train_on_heldout(scores_tst, scores_trn, targets_trn, 
+                                                            calparams=calparams, 
+                                                            calmethod=calmethod, 
+                                                            return_model=True)
 
-    return calibrated_logits,logits_held_out, targets_held_out
+    ###################################################################################################
+    # Compute the selected EPSR before and after calibration
+    overall_perf = metric(scores_tst, targets_tst, priors=deploy_priors, norm=True)
+    overall_perf_after_cal = metric(scores_tst_cal, targets_tst, priors=deploy_priors, norm=True)
+    cal_loss = overall_perf-overall_perf_after_cal
+    rel_cal_loss = 100*cal_loss/overall_perf
+
+    print(f"Overall performance before calibration ({metric.__name__}) = {overall_perf:4.2f}" ) 
+    print(f"Overall performance after calibration ({metric.__name__}) = {overall_perf_after_cal:4.2f}" ) 
+    print(f"Calibration loss = {cal_loss:4.2f}" ) 
+    print(f"Relative calibration loss = {rel_cal_loss:4.1f}%" ) 
+
+    ###################################################################################################
+
+    #torch.save(calibration_model.state_dict(), f'models/{model_name}_calibration.pth')
+    performance_dict = {
+    "overall_perf": overall_perf,
+    "overall_perf_after_cal": overall_perf_after_cal,
+    "cal_loss": cal_loss,
+    "rel_cal_loss": rel_cal_loss
+    }
+
+    return performance_dict, scores_tst, targets_tst, scores_tst_cal
