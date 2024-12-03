@@ -101,7 +101,7 @@ def scores_distribution(
     plt.legend(title="Metric", fontsize=12, title_fontsize=14)
 
     plt.tight_layout()
-    plt.savefig(f"./plots/{dataset}_{model_name}.png", dpi=300)
+    plt.savefig(f"./plots/labels_distribution_{dataset}_{model_name}.png", dpi=300)
     return merged
 
 import pandas as pd
@@ -172,5 +172,5 @@ def create_performance_plot(dataframe, save_path, model_name, dataset_name):
     )
 
     # Save the plot
-    plot.savefig(save_path)
+    plot.savefig(f"{save_path}_calibration.png", dpi=300)
     sns.reset_defaults()

@@ -63,7 +63,7 @@ def main():
         
         df = pd.read_csv(f"./outputs/performance_{dataset_name}_{model_name}.csv")
         print(df)
-        create_performance_plot(df, f"./plots/{dataset_name}_{model_name}.jpg", model_name, dataset_name)
+        create_performance_plot(df, f"./plots/{dataset_name}_{model_name}", model_name, dataset_name)
 
     def load_tokenizer():
         tokenizer_path = "./tokenizer/tokenizer.json"
