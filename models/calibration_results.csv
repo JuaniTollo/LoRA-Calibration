@@ -1,9 +1,0 @@
-model,overall_perf,overall_perf_after_cal,cal_loss,rel_cal_loss
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-1.5/socialiqa/8/4/5000/1e-5,0.7959494,0.772553130199048,0.023396269272234926,2.939416662387851
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-2/socialiqa/16/5/5000/1e-5,0.60137004,0.5864695233959749,0.014900513206045352,2.477761161869516
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-1.5/socialiqa/Base,0.94820887,0.8113996900772166,0.13680917842635398,14.42816904278288
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-2/socialiqa/Base,0.80883545,0.7200161829600711,0.08881926387449313,10.98112900740116
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-1.5/hellaswag/16/5/2000/1e-5,0.9784217,0.9697168305145379,0.008704857565296042,0.8896836273508455
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-2/hellaswag/Base,1.0343782,0.899253872995588,0.13512429797151404,13.063336192137372
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-2/hellaswag/16/4/5000/1e-5,0.77724206,0.753749374101417,0.023492690374596226,3.022570631252967
-/Users/juantollo/Library/Mobile Documents/com~apple~CloudDocs/Tesis/experimentos/output copy/microsoft/phi-1.5/hellaswag/Base,0.9950245,0.9480941595019066,0.046930342775467704,4.716501218618769

@@ -1,113 +1,105 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+
+
 def scores_distribution(
-    base_logits,
-    base_targets,
-    fine_tuned_logits,
-    fine_tuned_targets,
-    calibrated_base_logits,
-    calibrated_fine_tuned_logits,
+    base_test_logits,
+    base_test_targets,
+    base_test_calibrated_logits,
+    ft_logits_held_out,
+    ft_targets_held_out,
+    ft_calibrated_logits,
     dataset,
-    model_name
+    model_name,
+    tokenizer=None
 ):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from transformers import PreTrainedTokenizerFast
+    """
+    Visualize and compute distributions of logits and targets.
 
-    # Load tokenizer and decode target labels
-    tokenizer = PreTrainedTokenizerFast(tokenizer_file="./tokenizer/tokenizer.json")
-    decoded_base_targets = tokenizer.batch_decode(base_targets, skip_special_tokens=True)
-    decoded_fine_tuned_targets = tokenizer.batch_decode(fine_tuned_targets, skip_special_tokens=True)
-    decoded_original_targets = tokenizer.batch_decode(base_targets, skip_special_tokens=True)
-    unique_targets = np.unique(
-        decoded_base_targets + decoded_fine_tuned_targets + decoded_original_targets
-    )
+    Args:
+        base_test_logits (ndarray): Logits for base model.
+        base_test_targets (ndarray): Targets for base model.
+        base_test_calibrated_logits (ndarray): Calibrated logits for base model.
+        ft_logits_held_out (ndarray): Logits for fine-tuned model.
+        ft_targets_held_out (ndarray): Targets for fine-tuned model.
+        ft_calibrated_logits (ndarray): Calibrated logits for fine-tuned model.
+        dataset (str): Dataset name.
+        model_name (str): Model name.
+        tokenizer (PreTrainedTokenizer, optional): Tokenizer to decode target indices.
+    """
 
-    # Create a mapping of target strings to numerical indices
-    target_to_index = {target: idx for idx, target in enumerate(unique_targets)}
-
-    # Ensure logits have correct dimensions
-    def ensure_2d(logits):
-        return logits if logits.ndim == 2 else np.expand_dims(logits, axis=1)
-
-    base_logits = ensure_2d(base_logits)
-    fine_tuned_logits = ensure_2d(fine_tuned_logits)
-    calibrated_base_logits = ensure_2d(calibrated_base_logits)
-    calibrated_fine_tuned_logits = ensure_2d(calibrated_fine_tuned_logits)
-
-    # Softmax function
+    # Helper: softmax
     def softmax(x):
         e_x = np.exp(x - np.max(x, axis=1, keepdims=True))
         return e_x / e_x.sum(axis=1, keepdims=True)
 
-    # Map logits to valid classes
-    def map_logits_to_targets(logits, target_to_index):
-        mapped_logits = np.zeros((logits.shape[0], len(target_to_index)))
-        for i, target in enumerate(target_to_index):
-            if i < logits.shape[1]:  # Ensure valid mapping
-                mapped_logits[:, target_to_index[target]] = logits[:, i]
-        return mapped_logits
-
-    # Map logits to unique targets
-    base_logits_mapped = map_logits_to_targets(base_logits, target_to_index)
-    fine_tuned_logits_mapped = map_logits_to_targets(fine_tuned_logits, target_to_index)
-    calibrated_base_logits_mapped = map_logits_to_targets(calibrated_base_logits, target_to_index)
-    calibrated_fine_tuned_logits_mapped = map_logits_to_targets(calibrated_fine_tuned_logits, target_to_index)
-
-    # Process logits
-    base_scores = softmax(base_logits_mapped)
-    fine_tuned_scores = softmax(fine_tuned_logits_mapped)
-    calibrated_base_scores = softmax(calibrated_base_logits_mapped)
-    calibrated_fine_tuned_scores = softmax(calibrated_fine_tuned_logits_mapped)
-
-    # Calculate argmax distributions
-    def calculate_distribution(argmax_labels, num_targets):
-        counts = np.zeros(num_targets, dtype=int)
+    # Helper: calculate counts
+    def calculate_distribution(scores, targets):
+        argmax_labels = np.argmax(scores, axis=1)
+        unique_targets = np.unique(targets)
+        counts_dict = {target: 0 for target in unique_targets}
         for label in argmax_labels:
-            counts[label] += 1
-        return counts
+            if label in counts_dict:
+                counts_dict[label] += 1
+        df = pd.DataFrame(list(counts_dict.items()), columns=["Target_Index", "Count"])
+        if tokenizer:
+            df["Vocabulary"] = df["Target_Index"].apply(lambda x: tokenizer.decode([x]))
+        return df
 
-    base_argmax_labels = np.argmax(base_scores, axis=1)
-    fine_tuned_argmax_labels = np.argmax(fine_tuned_scores, axis=1)
-    calibrated_base_argmax_labels = np.argmax(calibrated_base_scores, axis=1)
-    calibrated_fine_tuned_argmax_labels = np.argmax(calibrated_fine_tuned_scores, axis=1)
+    # Prepare scores
+    base_scores = softmax(base_test_logits)
+    base_calibrated_scores = softmax(base_test_calibrated_logits)
+    ft_scores = softmax(ft_logits_held_out)
+    ft_calibrated_scores = softmax(ft_calibrated_logits)
 
-    num_targets = len(unique_targets)
-    base_distributions = calculate_distribution(base_argmax_labels, num_targets)
-    fine_tuned_distributions = calculate_distribution(fine_tuned_argmax_labels, num_targets)
-    calibrated_base_distributions = calculate_distribution(calibrated_base_argmax_labels, num_targets)
-    calibrated_fine_tuned_distributions = calculate_distribution(calibrated_fine_tuned_argmax_labels, num_targets)
+    # Calculate distributions
+    base_distribution = calculate_distribution(base_scores, base_test_targets)
+    base_calibrated_distribution = calculate_distribution(base_calibrated_scores, base_test_targets)
+    ft_distribution = calculate_distribution(ft_scores, ft_targets_held_out)
+    ft_calibrated_distribution = calculate_distribution(ft_calibrated_scores, ft_targets_held_out)
 
-    # Original target distribution
-    target_distributions = calculate_distribution(
-        [target_to_index[label] for label in decoded_original_targets if label in target_to_index], num_targets
+    # Merge datasets for unified view
+    merged = pd.concat([
+        base_distribution.rename(columns={"Count": "Base"}),
+        base_calibrated_distribution.rename(columns={"Count": "Base_Calibrated"}),
+        ft_distribution.rename(columns={"Count": "Fine_Tuned"}),
+        ft_calibrated_distribution.rename(columns={"Count": "Fine_Tuned_Calibrated"})
+    ], axis=1)
+    merged = merged.loc[:, ~merged.columns.duplicated()].fillna(0)
+
+    # Calculate and map counts for the `Target` column
+    decoded_targets = tokenizer.batch_decode(base_test_targets, skip_special_tokens=True)
+    counts_dict = Counter(decoded_targets)
+    merged["Target"] = merged["Vocabulary"].map(counts_dict).fillna(0).astype(int)
+
+    # Normalize columns
+    columns_to_normalize = ["Base", "Base_Calibrated", "Fine_Tuned", "Fine_Tuned_Calibrated", "Target"]
+    merged[columns_to_normalize] = merged[columns_to_normalize].div(merged[columns_to_normalize].sum(axis=0), axis=1)
+
+    # Plot distributions
+    melted_df = pd.melt(
+        merged,
+        id_vars=["Vocabulary"],
+        value_vars=columns_to_normalize,
+        var_name="Metric",
+        value_name="Value"
     )
+    merged_sorted = merged.sort_values(by="Vocabulary", ascending=True)
 
-    # Convert distributions to percentages
-    total_samples = len(base_targets)
-    base_percentages = 100 * np.array(base_distributions) / total_samples
-    fine_tuned_percentages = 100 * np.array(fine_tuned_distributions) / total_samples
-    calibrated_base_percentages = 100 * np.array(calibrated_base_distributions) / total_samples
-    calibrated_fine_tuned_percentages = 100 * np.array(calibrated_fine_tuned_distributions) / total_samples
-    target_percentages = 100 * np.array(target_distributions) / total_samples
+    sns.set_theme(style="whitegrid")
+    plt.figure(figsize=(12, 8))
+    sns.barplot(x="Vocabulary", y="Value", hue="Metric", data=melted_df, palette="viridis")
 
-    # Plotting
-    indices = np.arange(len(unique_targets))
-    width = 0.15  # Adjust width to fit all bars
+    plt.xlabel("Vocabulary", fontsize=14)
+    plt.ylabel("Proportion", fontsize=14)
+    plt.title(f"Grouped Bar Plot of Metrics by Vocabulary - {model_name}", fontsize=16)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.legend(title="Metric", fontsize=12, title_fontsize=14)
 
-    fig, ax = plt.subplots(figsize=(14, 8))
-    ax.bar(indices - 2 * width, base_percentages, width, label='Base', color='lightblue')
-    ax.bar(indices - width, fine_tuned_percentages, width, label='Fine-Tuned', color='lightgreen')
-    ax.bar(indices, calibrated_base_percentages, width, label='Base Calibrated', color='skyblue')
-    ax.bar(indices + width, calibrated_fine_tuned_percentages, width, label='Fine-Tuned Calibrated', color='salmon')
-    ax.bar(indices + 2 * width, target_percentages, width, label='Original Target', color='orange')
-
-    # Configure legend and labels
-    ax.set_ylabel('Score Percentage')
-    ax.set_xticks(indices)
-    ax.set_xticklabels(unique_targets, rotation=45, ha="right")
-    ax.legend(title="Distributions", loc="upper right")
-    ax.set_title(f"{model_name} {dataset} - Label Distributions")
-
-    # Save the plot
     plt.tight_layout()
-    plt.savefig(f"./outputs/{model_name}_{dataset}_Score_Distributions.png", dpi=300)
-    plt.close()
+    plt.savefig(f"./outputs/{dataset}_{model_name}.png", dpi=300)
+    return merged

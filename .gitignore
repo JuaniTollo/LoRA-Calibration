@@ -3,3 +3,8 @@
 ./models
 ./__pycache__
 *.png
+*.pth
+
+# Ignore Python compiled files
+*.pyc
+__pycache__/
