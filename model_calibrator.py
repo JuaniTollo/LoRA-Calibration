@@ -20,16 +20,11 @@ def calculate_accuracy(logits, targets):
     """
     # Obtener las predicciones seleccionando el índice máximo (clase más probable)
     predictions = np.argmax(logits, axis=0)
-    
-    # Comparar predicciones con los targets
     correct_predictions = np.sum(predictions == targets)
-    
-    # Calcular precisión
     accuracy = correct_predictions / len(targets)
     return accuracy
 
 def divide_test_and_cal(logits, targets, prop=0.2):
-    """Split logits and targets into calibration and held-out subsets."""
     indices_cal, indices_held_out = train_test_split(
         range(len(targets)), test_size=1 - prop, stratify=targets
     )
