@@ -1,0 +1,5 @@
+Overfitear el calibrador a test.
+Identificar nichos
+Ingeniería de prompts
+Evaluar más modelos
+Leer estado del arte
